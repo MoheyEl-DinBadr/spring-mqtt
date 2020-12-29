@@ -1,4 +1,4 @@
-package com.example.mqtt.core;
+package com.mohey.mqtt.core;
 
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -13,13 +15,18 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
     private MqttClient mqttClient;
     private Map<String, Integer> topics;
-    private MemoryPersistence memoryPersistence;
-    private MqttConnectOptions mqttConnectOptions;
+    private String clientId;
+
+    private static MQTTSubscriber instance;
 
     private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
 
     private MQTTSubscriber(){
-        config();
+        instance = this;
+    }
+
+    private static MQTTSubscriber getInstance(){
+        return instance;
     }
 
     @Override
@@ -90,6 +97,13 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
     @Override
     public void connectComplete(boolean reconnect, String serverURI) {
+
+        try {
+            this.mqttClient.publish("status/" + this.clientId,"alive".getBytes(), 2, true );
+        } catch (MqttException e) {
+            logger.debug(e.getMessage());
+            e.printStackTrace();
+        }
         if(topics != null && !topics.isEmpty()){
             for(String topic : topics.keySet()){
                 try {
@@ -171,25 +185,24 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
             serverURL = this.getSSL() + this.getUrl() + ":" + this.getPort();
         }
 
-        String will = this.getClientId() + ": disconnected";
+        this.clientId = this.getClientId() + "_sub";
+        MemoryPersistence memoryPersistence = new MemoryPersistence();
 
-        this.memoryPersistence = new MemoryPersistence();
-
-        this.mqttConnectOptions = new MqttConnectOptions();
-        this.mqttConnectOptions.setAutomaticReconnect(true);
-        this.mqttConnectOptions.setCleanSession(true);
-        this.mqttConnectOptions.setWill("status", will.getBytes(), 2, true);
-        if(this.getUsername().trim() != null){
-            this.mqttConnectOptions.setUserName(this.getUsername());
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setCleanSession(true);
+        mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
+        if(!this.getUsername().trim().isEmpty()){
+            mqttConnectOptions.setUserName(this.getUsername());
         }
-        if(this.getPassword().trim() != null){
-            this.mqttConnectOptions.setPassword(this.getPassword().toCharArray());
+        if(!this.getPassword().trim().isEmpty()){
+            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
         }
 
         try {
-            this.mqttClient = new MqttClient(serverURL, this.getClientId(), this.memoryPersistence);
+            this.mqttClient = new MqttClient(serverURL, this.clientId, memoryPersistence);
             this.mqttClient.connect(mqttConnectOptions);
-
+            this.topics = new HashMap<>();
             Thread mqttClose = new Thread(() -> {
                 try {
                     this.mqttClient.close();

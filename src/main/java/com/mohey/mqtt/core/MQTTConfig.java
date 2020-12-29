@@ -1,33 +1,36 @@
-package com.example.mqtt.core;
+package com.mohey.mqtt.core;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 
+import javax.annotation.PostConstruct;
+
 @Getter
 public abstract class MQTTConfig {
 
-    @Value("mqtt.brokerURL")
+    @Value("${mqtt.brokerURL:127.0.0.1}")
     private String url;
 
-    @Value("mqtt.port")
+    @Value("${mqtt.port:1883}")
     private int port;
 
-    @Value("mqtt.username")
+    @Value("${mqtt.username:}")
     private String username;
 
-    @Value("mqtt.password")
+    @Value("${mqtt.password:}")
     private String password;
 
-    @Value("mqtt.hasSSL")
+    @Value("${mqtt.hasSSL:false}")
     private boolean hasSSl;
 
-    @Value("mqtt.clientId")
+    @Value("${mqtt.clientId:}")
     private String clientId;
 
     private String TCP = "tcp://";
 
     private  String SSL = "ssl://";
 
+    @PostConstruct
     protected abstract void config();
 
 }
