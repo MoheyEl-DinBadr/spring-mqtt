@@ -1,7 +1,8 @@
 package com.mohey.mqtt.core;
+
 /**
  * @author Mohey El-Din Badr
- * @since 2020/12/28
+ * @since 2020/12/29
  */
 
 import org.eclipse.paho.client.mqttv3.*;
@@ -10,31 +11,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
 
 @Component
-public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, IMQTTSubscriber{
+public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPublisher {
 
-    private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
-    private static MQTTSubscriber instance;
-    private MqttClient mqttClient;
-    private Map<String, Integer> topics;
+    private MqttAsyncClient mqttClient;
     private String clientId;
 
-    private MQTTSubscriber(){
+    private static MQTTPublisher instance;
+
+    private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
+
+    private MQTTPublisher() {
         instance = this;
     }
 
-    private static MQTTSubscriber getInstance(){
+    public static MQTTPublisher getInstance(){
         return instance;
     }
 
     @Override
-    public void subscribeMessage(String topic, int qos) {
+    public void publishMessage(String topic, String message, int qos, boolean retain) {
         try {
-            mqttClient.subscribe(topic,qos);
-            this.topics.put(topic, qos);
+            this.mqttClient.publish(topic, message.getBytes(), qos, retain);
         } catch (MqttException e) {
             logger.info(e.getMessage());
             e.printStackTrace();
@@ -42,10 +41,9 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     }
 
     @Override
-    public void subscribeMessage(String topic) {
+    public void publishMessage(String topic, String message) {
         try {
-            mqttClient.subscribe(topic);
-            this.topics.put(topic, 1);
+            this.mqttClient.publish(topic, new MqttMessage(message.getBytes()));
         } catch (MqttException e) {
             logger.info(e.getMessage());
             e.printStackTrace();
@@ -53,67 +51,62 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     }
 
     @Override
-    public void subscribeMessages(String[] topics) {
+    public void publishMessage(String topic, MqttMessage message) {
         try {
-            mqttClient.subscribe(topics);
-            for(String topic : topics){
-                this.topics.put(topic, 1);
-            }
+            this.mqttClient.publish(topic, message);
         } catch (MqttException e) {
             logger.info(e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public void subscribeMessages(String[] topics, int[] qos) {
-        try {
-            mqttClient.subscribe(topics, qos);
-            for(int i=0; i < topics.length; i++){
-                this.topics.put(topics[i], qos[i]);
-            }
-        } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
-        }
-
     }
 
     @Override
     public void disconnect() {
         try {
-            mqttClient.disconnect();
+            this.mqttClient.disconnect();
+            logger.info("Publisher disconnected");
         } catch (MqttException e) {
             logger.info(e.getMessage());
             e.printStackTrace();
         }
+
     }
 
-    /**
-     * Called when the connection to the server is completed successfully.
-     *
-     * @param reconnect If true, the connection was the result of automatic reconnect.
-     * @param serverURI The server URI that the connection was made to.
-     */
-
     @Override
-    public void connectComplete(boolean reconnect, String serverURI) {
+    protected void config() {
+        String serverURL = this.getTCP() + this.getUrl() + ":" + this.getPort();
+        if(isHasSSl()){
+            serverURL = this.getSSL() + this.getUrl() + ":" + this.getPort();
+        }
+
+        this.clientId = this.getClientId() + "_pub";
+        MemoryPersistence memoryPersistence = new MemoryPersistence();
+
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setCleanSession(true);
+        mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
+        if(!this.getUsername().trim().isEmpty()){
+            mqttConnectOptions.setUserName(this.getUsername());
+        }
+        if(!this.getPassword().trim().isEmpty()){
+            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
+        }
 
         try {
-            this.mqttClient.publish("status/" + this.clientId,"alive".getBytes(), 2, true );
-        } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
-        }
-        if(topics != null && !topics.isEmpty()){
-            for(String topic : topics.keySet()){
+            this.mqttClient = new MqttAsyncClient(serverURL, this.clientId, memoryPersistence);
+            this.mqttClient.connect(mqttConnectOptions);
+            Thread mqttClose = new Thread(() -> {
                 try {
-                    mqttClient.subscribe(topic, topics.get(topic));
+                    this.mqttClient.close();
                 } catch (MqttException e) {
-                    logger.info(e.getMessage() + ", " + topic);
                     e.printStackTrace();
                 }
-            }
+            });
+            Runtime.getRuntime().addShutdownHook(mqttClose);
+            this.mqttClient.setCallback(this);
+        } catch (MqttException e) {
+            e.printStackTrace();
         }
     }
 
@@ -124,7 +117,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      */
     @Override
     public void connectionLost(Throwable cause) {
-        logger.info("Connection Lost");
+        logger.info(cause.getMessage());
     }
 
     /**
@@ -160,8 +153,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      */
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        logger.info("Topic: " + topic + "\n" +
-                "Message: " + message.toString());
+
     }
 
     /**
@@ -176,46 +168,11 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      */
     @Override
     public void deliveryComplete(IMqttDeliveryToken token) {
-
-    }
-
-    @Override
-    protected void config() {
-        String serverURL = this.getTCP() + this.getUrl() + ":" + this.getPort();
-        if(isHasSSl()){
-            serverURL = this.getSSL() + this.getUrl() + ":" + this.getPort();
-        }
-
-        this.clientId = this.getClientId() + "_sub";
-        MemoryPersistence memoryPersistence = new MemoryPersistence();
-
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(true);
-        mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
-        if(!this.getUsername().trim().isEmpty()){
-            mqttConnectOptions.setUserName(this.getUsername());
-        }
-        if(!this.getPassword().trim().isEmpty()){
-            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
-        }
-
         try {
-            this.mqttClient = new MqttClient(serverURL, this.clientId, memoryPersistence);
-            this.mqttClient.connect(mqttConnectOptions);
-            this.topics = new HashMap<>();
-            Thread mqttClose = new Thread(() -> {
-                try {
-                    this.mqttClient.close();
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
-            });
-            Runtime.getRuntime().addShutdownHook(mqttClose);
-            this.mqttClient.setCallback(this);
+            logger.info(token.getMessage().toString());
         } catch (MqttException e) {
             e.printStackTrace();
         }
-
     }
+
 }

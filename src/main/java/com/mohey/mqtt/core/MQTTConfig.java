@@ -1,5 +1,8 @@
 package com.mohey.mqtt.core;
-
+/**
+ * @author Mohey El-Din Badr
+ * @since 2020/12/28
+ */
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 
