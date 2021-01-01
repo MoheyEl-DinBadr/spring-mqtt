@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +46,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     @Override
     public void subscribeMessage(String topic) {
         try {
-            mqttClient.subscribe(topic);
+            mqttClient.subscribe(topic, this.getQos());
             this.topics.put(topic, 1);
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
@@ -54,14 +55,9 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
     @Override
     public void subscribeMessages(String[] topics) {
-        try {
-            mqttClient.subscribe(topics);
-            for(String topic : topics){
-                this.topics.put(topic, 1);
-            }
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+        int[] qos = new int[topics.length];
+        Arrays.fill(qos, this.getQos());
+        this.subscribeMessages(topics, qos);
     }
 
     @Override

@@ -26,7 +26,7 @@ public abstract class MQTTConfig {
     @Value("${mqtt.hasSSL:false}")
     private boolean hasSSl;
 
-    @Value("${mqtt.qos:2")
+    @Value("${mqtt.qos:1}")
     private int qos;
 
     @Value("${mqtt.clientId:}")
