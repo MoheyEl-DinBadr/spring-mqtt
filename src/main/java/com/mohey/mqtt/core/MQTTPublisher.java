@@ -16,9 +16,6 @@ import org.springframework.stereotype.Component;
 public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPublisher {
 
     private MqttAsyncClient mqttClient;
-    private MqttConnectOptions mqttConnectOptions;
-    private MemoryPersistence memoryPersistence;
-    private String clientId;
 
     private static MQTTPublisher instance;
 
@@ -74,25 +71,25 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         if(isHasSSl()){
             serverURL = serverURL.replace(this.getTCP(), this.getSSL());
         }
-        this.clientId = this.getClientId() + "_pub";
+        String clientId = this.getClientId() + "_pub";
 
-        this.memoryPersistence = new MemoryPersistence();
+        MemoryPersistence memoryPersistence = new MemoryPersistence();
 
-        this.mqttConnectOptions = new MqttConnectOptions();
-        this.mqttConnectOptions.setAutomaticReconnect(true);
-        this.mqttConnectOptions.setCleanSession(true);
-        this.mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setCleanSession(true);
+        mqttConnectOptions.setWill("status/"+ clientId, "disconnected".getBytes(), 2, true);
         if(!this.getUsername().trim().isEmpty()){
-            this.mqttConnectOptions.setUserName(this.getUsername());
+            mqttConnectOptions.setUserName(this.getUsername());
         }
         if(!this.getPassword().trim().isEmpty()){
-            this.mqttConnectOptions.setPassword(this.getPassword().toCharArray());
+            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
         }
 
         try {
-            this.mqttClient = new MqttAsyncClient(serverURL, this.clientId, this.memoryPersistence);
+            this.mqttClient = new MqttAsyncClient(serverURL, clientId, memoryPersistence);
             this.mqttClient.setCallback(this);
-            this.mqttClient.connect(this.mqttConnectOptions);
+            this.mqttClient.connect(mqttConnectOptions);
             Thread mqttClose = new Thread(() -> {
                 try {
                     this.mqttClient.close();
