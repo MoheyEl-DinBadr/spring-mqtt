@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPublisher {
 
     private MqttAsyncClient mqttClient;
+    private MqttConnectOptions mqttConnectOptions;
+    private MemoryPersistence memoryPersistence;
     private String clientId;
 
     private static MQTTPublisher instance;
@@ -35,8 +37,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         try {
             this.mqttClient.publish(topic, message.getBytes(), qos, retain);
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -45,8 +46,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         try {
             this.mqttClient.publish(topic, new MqttMessage(message.getBytes()));
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -55,8 +55,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         try {
             this.mqttClient.publish(topic, message);
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -64,38 +63,36 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
     public void disconnect() {
         try {
             this.mqttClient.disconnect();
-            logger.info("Publisher disconnected");
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
-
     }
 
     @Override
     protected void config() {
         String serverURL = this.getTCP() + this.getUrl() + ":" + this.getPort();
         if(isHasSSl()){
-            serverURL = this.getSSL() + this.getUrl() + ":" + this.getPort();
+            serverURL = serverURL.replace(this.getTCP(), this.getSSL());
         }
-
         this.clientId = this.getClientId() + "_pub";
-        MemoryPersistence memoryPersistence = new MemoryPersistence();
 
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(true);
-        mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
+        this.memoryPersistence = new MemoryPersistence();
+
+        this.mqttConnectOptions = new MqttConnectOptions();
+        this.mqttConnectOptions.setAutomaticReconnect(true);
+        this.mqttConnectOptions.setCleanSession(true);
+        this.mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
         if(!this.getUsername().trim().isEmpty()){
-            mqttConnectOptions.setUserName(this.getUsername());
+            this.mqttConnectOptions.setUserName(this.getUsername());
         }
         if(!this.getPassword().trim().isEmpty()){
-            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
+            this.mqttConnectOptions.setPassword(this.getPassword().toCharArray());
         }
 
         try {
-            this.mqttClient = new MqttAsyncClient(serverURL, this.clientId, memoryPersistence);
-            this.mqttClient.connect(mqttConnectOptions);
+            this.mqttClient = new MqttAsyncClient(serverURL, this.clientId, this.memoryPersistence);
+            this.mqttClient.setCallback(this);
+            this.mqttClient.connect(this.mqttConnectOptions);
             Thread mqttClose = new Thread(() -> {
                 try {
                     this.mqttClient.close();
@@ -104,9 +101,9 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
                 }
             });
             Runtime.getRuntime().addShutdownHook(mqttClose);
-            this.mqttClient.setCallback(this);
+
         } catch (MqttException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -168,11 +165,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
      */
     @Override
     public void deliveryComplete(IMqttDeliveryToken token) {
-        try {
-            logger.info(token.getMessage().toString());
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
+        logger.info("Delivery Completed");
     }
 
 }
