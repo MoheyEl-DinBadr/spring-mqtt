@@ -97,7 +97,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     public void connectComplete(boolean reconnect, String serverURI) {
 
         try {
-            this.mqttClient.publish("status/" + this.clientId,"alive".getBytes(), 2, true );
+            this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), 2, true );
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
@@ -192,7 +192,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         mqttConnectOptions = new MqttConnectOptions();
         this.mqttConnectOptions.setAutomaticReconnect(true);
         this.mqttConnectOptions.setCleanSession(true);
-        this.mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
+        this.mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), this.getQos(), true);
         if(!this.getUsername().trim().isEmpty()){
             this.mqttConnectOptions.setUserName(this.getUsername());
         }

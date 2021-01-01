@@ -13,11 +13,13 @@ import org.springframework.stereotype.Component;
 
 
 @Component
-public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPublisher {
+public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, IMQTTPublisher {
 
     private MqttAsyncClient mqttClient;
 
     private static MQTTPublisher instance;
+
+    private String clientId;
 
     private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
 
@@ -41,7 +43,9 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
     @Override
     public void publishMessage(String topic, String message) {
         try {
-            this.mqttClient.publish(topic, new MqttMessage(message.getBytes()));
+            MqttMessage mqttMessage = new MqttMessage(message.getBytes());
+            mqttMessage.setQos(this.getQos());
+            this.mqttClient.publish(topic, mqttMessage);
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
@@ -71,14 +75,14 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         if(isHasSSl()){
             serverURL = serverURL.replace(this.getTCP(), this.getSSL());
         }
-        String clientId = this.getClientId() + "_pub";
+        this.clientId = this.getClientId() + "_pub";
 
         MemoryPersistence memoryPersistence = new MemoryPersistence();
 
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setAutomaticReconnect(true);
         mqttConnectOptions.setCleanSession(true);
-        mqttConnectOptions.setWill("status/"+ clientId, "disconnected".getBytes(), 2, true);
+        mqttConnectOptions.setWill("status/"+ clientId, "disconnected".getBytes(), this.getQos(), true);
         if(!this.getUsername().trim().isEmpty()){
             mqttConnectOptions.setUserName(this.getUsername());
         }
@@ -165,4 +169,18 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         logger.info("Delivery Completed");
     }
 
+    /**
+     * Called when the connection to the server is completed successfully.
+     *
+     * @param reconnect If true, the connection was the result of automatic reconnect.
+     * @param serverURI The server URI that the connection was made to.
+     */
+    @Override
+    public void connectComplete(boolean reconnect, String serverURI) {
+        try {
+            this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), this.getQos(), true );
+        } catch (MqttException e) {
+            logger.error(e.getMessage(), e);
+        }
+    }
 }
