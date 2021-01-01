@@ -22,8 +22,6 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     private MqttClient mqttClient;
     private Map<String, Integer> topics;
     private String clientId;
-    private MqttConnectOptions mqttConnectOptions;
-    private MemoryPersistence memoryPersistence;
 
     private MQTTSubscriber(){
         instance = this;
@@ -151,12 +149,8 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      */
     @Override
     public void messageArrived(String topic, MqttMessage message) {
-        try {
             logger.info("Topic: " + topic + ", " +
                     "Message: " + message.toString());
-        }catch (Exception e){
-            logger.error(e.getMessage(), e);
-        }
 
     }
 
@@ -183,23 +177,23 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         }
 
         this.clientId = this.getClientId() + "_sub";
-        this.memoryPersistence = new MemoryPersistence();
+        MemoryPersistence memoryPersistence = new MemoryPersistence();
 
-        mqttConnectOptions = new MqttConnectOptions();
-        this.mqttConnectOptions.setAutomaticReconnect(true);
-        this.mqttConnectOptions.setCleanSession(true);
-        this.mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), this.getQos(), true);
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setCleanSession(true);
+        mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), this.getQos(), true);
         if(!this.getUsername().trim().isEmpty()){
-            this.mqttConnectOptions.setUserName(this.getUsername());
+            mqttConnectOptions.setUserName(this.getUsername());
         }
         if(!this.getPassword().trim().isEmpty()){
-            this.mqttConnectOptions.setPassword(this.getPassword().toCharArray());
+            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
         }
 
         try {
-            this.mqttClient = new MqttClient(serverURL, this.clientId, this.memoryPersistence);
+            this.mqttClient = new MqttClient(serverURL, this.clientId, memoryPersistence);
             this.mqttClient.setCallback(this);
-            this.mqttClient.connect(this.mqttConnectOptions);
+            this.mqttClient.connect(mqttConnectOptions);
             this.topics = new HashMap<>();
             Thread mqttClose = new Thread(() -> {
                 try {
