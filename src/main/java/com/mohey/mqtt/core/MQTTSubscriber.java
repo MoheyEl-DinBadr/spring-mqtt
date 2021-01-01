@@ -21,12 +21,14 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     private MqttClient mqttClient;
     private Map<String, Integer> topics;
     private String clientId;
+    private MqttConnectOptions mqttConnectOptions;
+    private MemoryPersistence memoryPersistence;
 
     private MQTTSubscriber(){
         instance = this;
     }
 
-    private static MQTTSubscriber getInstance(){
+    public static MQTTSubscriber getInstance(){
         return instance;
     }
 
@@ -36,8 +38,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
             mqttClient.subscribe(topic,qos);
             this.topics.put(topic, qos);
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -47,8 +48,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
             mqttClient.subscribe(topic);
             this.topics.put(topic, 1);
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -60,8 +60,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
                 this.topics.put(topic, 1);
             }
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -73,8 +72,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
                 this.topics.put(topics[i], qos[i]);
             }
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
     }
@@ -84,8 +82,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         try {
             mqttClient.disconnect();
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -102,16 +99,14 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         try {
             this.mqttClient.publish("status/" + this.clientId,"alive".getBytes(), 2, true );
         } catch (MqttException e) {
-            logger.info(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
         if(topics != null && !topics.isEmpty()){
             for(String topic : topics.keySet()){
                 try {
                     mqttClient.subscribe(topic, topics.get(topic));
                 } catch (MqttException e) {
-                    logger.info(e.getMessage() + ", " + topic);
-                    e.printStackTrace();
+                    logger.error(e.getMessage() + ", " + topic, e);
                 }
             }
         }
@@ -159,9 +154,14 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      *                   shut down.
      */
     @Override
-    public void messageArrived(String topic, MqttMessage message) throws Exception {
-        logger.info("Topic: " + topic + "\n" +
-                "Message: " + message.toString());
+    public void messageArrived(String topic, MqttMessage message) {
+        try {
+            logger.info("Topic: " + topic + ", " +
+                    "Message: " + message.toString());
+        }catch (Exception e){
+            logger.error(e.getMessage(), e);
+        }
+
     }
 
     /**
@@ -187,34 +187,35 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         }
 
         this.clientId = this.getClientId() + "_sub";
-        MemoryPersistence memoryPersistence = new MemoryPersistence();
+        this.memoryPersistence = new MemoryPersistence();
 
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(true);
-        mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
+        mqttConnectOptions = new MqttConnectOptions();
+        this.mqttConnectOptions.setAutomaticReconnect(true);
+        this.mqttConnectOptions.setCleanSession(true);
+        this.mqttConnectOptions.setWill("status/"+this.clientId, "disconnected".getBytes(), 2, true);
         if(!this.getUsername().trim().isEmpty()){
-            mqttConnectOptions.setUserName(this.getUsername());
+            this.mqttConnectOptions.setUserName(this.getUsername());
         }
         if(!this.getPassword().trim().isEmpty()){
-            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
+            this.mqttConnectOptions.setPassword(this.getPassword().toCharArray());
         }
 
         try {
-            this.mqttClient = new MqttClient(serverURL, this.clientId, memoryPersistence);
-            this.mqttClient.connect(mqttConnectOptions);
+            this.mqttClient = new MqttClient(serverURL, this.clientId, this.memoryPersistence);
+            this.mqttClient.setCallback(this);
+            this.mqttClient.connect(this.mqttConnectOptions);
             this.topics = new HashMap<>();
             Thread mqttClose = new Thread(() -> {
                 try {
                     this.mqttClient.close();
                 } catch (MqttException e) {
-                    e.printStackTrace();
+                    logger.error(e.getMessage(), e);
                 }
             });
             Runtime.getRuntime().addShutdownHook(mqttClose);
-            this.mqttClient.setCallback(this);
+
         } catch (MqttException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
     }
