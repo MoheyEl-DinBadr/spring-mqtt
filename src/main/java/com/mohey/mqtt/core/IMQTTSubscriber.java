@@ -24,5 +24,9 @@ public interface IMQTTSubscriber {
 
     void subscribeMessages(String[] topics, int[] qos, IMqttMessageListener[] messageListeners);
 
+    void unsubscribeMessage(String topic);
+
+    void unsubscribeMessages(String[] topics);
+
     void disconnect();
 }

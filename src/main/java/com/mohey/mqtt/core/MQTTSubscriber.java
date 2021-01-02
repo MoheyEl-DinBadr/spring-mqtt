@@ -21,10 +21,11 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     private static MQTTSubscriber instance;
     @Getter
     private MqttClient mqttClient;
-    //private Map<String, Integer> topics;
+
     private String clientId;
 
-    private final Set<SubscribedTuple> subscribedTupleList = new HashSet<>();
+    @Getter
+    private final Map<String, SubscribedTuple> subscribedTuples = new HashMap<>();
 
     private MQTTSubscriber(){
         instance = this;
@@ -38,7 +39,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     public void subscribeMessage(String topic, int qos) {
         try {
             this.mqttClient.subscribe(topic,qos);
-            this.subscribedTupleList.add(new SubscribedTuple(topic, qos));
+            this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos));
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
@@ -58,7 +59,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     public void subscribeMessage(String topic, int qos, IMqttMessageListener messageListener) {
         try {
             this.mqttClient.subscribe(topic, qos, messageListener);
-            this.subscribedTupleList.add(new SubscribedTuple(topic, qos, messageListener));
+            this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos, messageListener));
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
@@ -76,7 +77,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         try {
             this.mqttClient.subscribe(topics, qos);
             for(int i=0; i< topics.length; i++){
-                this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i]));
+                this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i]));
             }
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
@@ -97,7 +98,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
             for(int i=0; i<topics.length; i++){
                 try{
-                    this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
+                    this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
                 }catch (Exception e){
                     logger.error(e.getMessage(), e);
                 }
@@ -105,6 +106,23 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
             }
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void unsubscribeMessage(String topic) {
+        try {
+            this.mqttClient.unsubscribe(topic);
+            this.subscribedTuples.remove(topic);
+        } catch (MqttException e) {
+            logger.error(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void unsubscribeMessages(String[] topics) {
+        for(String topic : topics){
+            unsubscribeMessage(topic);
         }
     }
 
@@ -132,8 +150,8 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
-        if(this.subscribedTupleList.size() != 0){
-            for(SubscribedTuple tuple : this.subscribedTupleList){
+        if(this.subscribedTuples.size() != 0){
+            for(SubscribedTuple tuple : this.subscribedTuples.values()){
                 try {
                     this.mqttClient.subscribe(tuple.getTopic(), tuple.getQos(), tuple.getMessageListener());
                 } catch (MqttException e) {
