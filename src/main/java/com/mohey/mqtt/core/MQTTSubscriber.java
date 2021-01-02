@@ -36,7 +36,12 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
     @Override
     public void subscribeMessage(String topic, int qos) {
-        this.subscribeMessage(topic,qos);
+        try {
+            this.mqttClient.subscribe(topic,qos);
+            this.subscribedTupleList.add(new SubscribedTuple(topic, qos));
+        } catch (MqttException e) {
+            logger.error(e.getMessage(), e);
+        }
     }
 
     @Override
