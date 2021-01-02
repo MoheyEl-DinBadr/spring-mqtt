@@ -24,7 +24,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     //private Map<String, Integer> topics;
     private String clientId;
 
-    private Set<SubscribedTuple> subscribedTupleList = new HashSet<>();
+    private final Set<SubscribedTuple> subscribedTupleList = new HashSet<>();
 
     private MQTTSubscriber(){
         instance = this;
@@ -124,7 +124,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
-        if(this.subscribedTupleList != null && this.subscribedTupleList.size() != 0){
+        if(this.subscribedTupleList.size() != 0){
             for(SubscribedTuple tuple : this.subscribedTupleList){
                 try {
                     this.mqttClient.subscribe(tuple.getTopic(), tuple.getQos(), tuple.getMessageListener());
@@ -177,7 +177,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      *                   shut down.
      */
     @Override
-    public void messageArrived(String topic, MqttMessage message) {
+    public void messageArrived(String topic, MqttMessage message) throws Exception{
             logger.info("Topic: " + topic + ", " +
                     "Message: " + message.toString());
 
