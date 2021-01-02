@@ -1,7 +1,6 @@
 package com.mohey.mqtt.model;
 
 import lombok.Getter;
-import lombok.Setter;
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 
 /**
