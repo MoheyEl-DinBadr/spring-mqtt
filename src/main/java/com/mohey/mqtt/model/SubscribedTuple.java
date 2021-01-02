@@ -19,10 +19,15 @@ public class SubscribedTuple {
 
     private IMqttMessageListener messageListener;
 
-    public SubscribedTuple(String topic, int qos, IMqttMessageListener messageListener) {
+    public SubscribedTuple(@NonNull String topic, @NonNull int qos, IMqttMessageListener messageListener) {
         this.topic = topic;
         this.qos = qos;
         this.messageListener = messageListener;
+    }
+
+    public SubscribedTuple(@NonNull String topic, @NonNull int qos) {
+        this.topic = topic;
+        this.qos = qos;
     }
 
     @Override

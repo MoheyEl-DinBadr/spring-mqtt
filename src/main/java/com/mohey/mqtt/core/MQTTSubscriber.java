@@ -36,12 +36,12 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
     @Override
     public void subscribeMessage(String topic, int qos) {
-        this.subscribeMessage(topic,qos, null);
+        this.subscribeMessage(topic,qos);
     }
 
     @Override
     public void subscribeMessage(String topic) {
-        this.subscribeMessage(topic, this.getQos(), null);
+        this.subscribeMessage(topic, this.getQos());
     }
 
     @Override
@@ -63,12 +63,19 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     public void subscribeMessages(String[] topics) {
         int[] qos = new int[topics.length];
         Arrays.fill(qos, this.getQos());
-        this.subscribeMessages(topics, qos, null);
+        this.subscribeMessages(topics, qos);
     }
 
     @Override
     public void subscribeMessages(String[] topics, int[] qos) {
-        this.subscribeMessages(topics, qos, null);
+        try {
+            this.mqttClient.subscribe(topics, qos);
+            for(int i=0; i< topics.length; i++){
+                this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i]));
+            }
+        } catch (MqttException e) {
+            logger.error(e.getMessage(), e);
+        }
     }
 
     @Override
@@ -82,14 +89,10 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     public void subscribeMessages(String[] topics, int[] qos, IMqttMessageListener[] messageListeners) {
         try {
             this.mqttClient.subscribe(topics, qos, messageListeners);
+
             for(int i=0; i<topics.length; i++){
                 try{
-                    if(messageListeners == null){
-                        this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i], null));
-                    }else{
-                        this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
-                    }
-
+                    this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
                 }catch (Exception e){
                     logger.error(e.getMessage(), e);
                 }
