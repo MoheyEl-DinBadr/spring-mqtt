@@ -5,8 +5,8 @@ import lombok.Setter;
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 
 /**
- * @author MoheyEl-DinBadr@outlook.com
- * @date
+ * @author Mohey El-Din Badr
+ * @date 2021/1/1
  */
 @Getter
 public class SubscribedTuple {
