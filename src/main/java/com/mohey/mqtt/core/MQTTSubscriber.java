@@ -4,24 +4,27 @@ package com.mohey.mqtt.core;
  * @since 2020/12/28
  */
 
+import com.mohey.mqtt.model.SubscribedTuple;
+import lombok.Getter;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, IMQTTSubscriber{
 
     private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
     private static MQTTSubscriber instance;
+    @Getter
     private MqttClient mqttClient;
-    private Map<String, Integer> topics;
+    //private Map<String, Integer> topics;
     private String clientId;
+
+    private Set<SubscribedTuple> subscribedTupleList = new HashSet<>();
 
     private MQTTSubscriber(){
         instance = this;
@@ -33,19 +36,24 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
     @Override
     public void subscribeMessage(String topic, int qos) {
-        try {
-            mqttClient.subscribe(topic,qos);
-            this.topics.put(topic, qos);
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+        this.subscribeMessage(topic,qos, null);
     }
 
     @Override
     public void subscribeMessage(String topic) {
+        this.subscribeMessage(topic, this.getQos(), null);
+    }
+
+    @Override
+    public void subscribeMessage(String topic, IMqttMessageListener messageListener) {
+        this.subscribeMessage(topic, this.getQos(), messageListener);
+    }
+
+    @Override
+    public void subscribeMessage(String topic, int qos, IMqttMessageListener messageListener) {
         try {
-            mqttClient.subscribe(topic, this.getQos());
-            this.topics.put(topic, 1);
+            this.mqttClient.subscribe(topic, qos, messageListener);
+            this.subscribedTupleList.add(new SubscribedTuple(topic, qos, messageListener));
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
@@ -55,20 +63,41 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     public void subscribeMessages(String[] topics) {
         int[] qos = new int[topics.length];
         Arrays.fill(qos, this.getQos());
-        this.subscribeMessages(topics, qos);
+        this.subscribeMessages(topics, qos, null);
     }
 
     @Override
     public void subscribeMessages(String[] topics, int[] qos) {
+        this.subscribeMessages(topics, qos, null);
+    }
+
+    @Override
+    public void subscribeMessages(String[] topics, IMqttMessageListener[] messageListeners) {
+        int[] qos = new int[topics.length];
+        Arrays.fill(qos, this.getQos());
+        this.subscribeMessages(topics, qos, messageListeners);
+    }
+
+    @Override
+    public void subscribeMessages(String[] topics, int[] qos, IMqttMessageListener[] messageListeners) {
         try {
-            mqttClient.subscribe(topics, qos);
-            for(int i=0; i < topics.length; i++){
-                this.topics.put(topics[i], qos[i]);
+            this.mqttClient.subscribe(topics, qos, messageListeners);
+            for(int i=0; i<topics.length; i++){
+                try{
+                    if(messageListeners == null){
+                        this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i], null));
+                    }else{
+                        this.subscribedTupleList.add(new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
+                    }
+
+                }catch (Exception e){
+                    logger.error(e.getMessage(), e);
+                }
+
             }
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
-
     }
 
     @Override
@@ -95,12 +124,12 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         } catch (MqttException e) {
             logger.error(e.getMessage(), e);
         }
-        if(topics != null && !topics.isEmpty()){
-            for(String topic : topics.keySet()){
+        if(this.subscribedTupleList != null && this.subscribedTupleList.size() != 0){
+            for(SubscribedTuple tuple : this.subscribedTupleList){
                 try {
-                    mqttClient.subscribe(topic, topics.get(topic));
+                    this.mqttClient.subscribe(tuple.getTopic(), tuple.getQos(), tuple.getMessageListener());
                 } catch (MqttException e) {
-                    logger.error(e.getMessage() + ", " + topic, e);
+                    logger.error(e.getMessage() + ", topic: " + tuple.getTopic(), e);
                 }
             }
         }
@@ -194,7 +223,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
             this.mqttClient = new MqttClient(serverURL, this.clientId, memoryPersistence);
             this.mqttClient.setCallback(this);
             this.mqttClient.connect(mqttConnectOptions);
-            this.topics = new HashMap<>();
+            //this.topics = new HashMap<>();
             Thread mqttClose = new Thread(() -> {
                 try {
                     this.mqttClient.close();
