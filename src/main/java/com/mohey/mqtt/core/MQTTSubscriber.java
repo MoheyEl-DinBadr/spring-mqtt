@@ -249,7 +249,6 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
             this.mqttClient = new MqttClient(serverURL, this.clientId, memoryPersistence);
             this.mqttClient.setCallback(this);
             this.mqttClient.connect(mqttConnectOptions);
-            //this.topics = new HashMap<>();
             Thread mqttClose = new Thread(() -> {
                 try {
                     this.mqttClient.close();
