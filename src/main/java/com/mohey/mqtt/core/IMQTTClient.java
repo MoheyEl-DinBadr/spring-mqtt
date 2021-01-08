@@ -4,7 +4,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 
 /**
  * @author MoheyEl-DinBadr@outlook.com
- * @date
+ * @date 2021/1/7
  */
 public interface IMQTTClient {
     boolean isConnected();
