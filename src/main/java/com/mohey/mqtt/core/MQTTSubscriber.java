@@ -36,103 +36,81 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     }
 
     @Override
-    public void subscribeMessage(String topic, int qos) {
-        try {
-            this.mqttClient.subscribe(topic,qos);
-            this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos));
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public void subscribeMessage(String topic) {
+    public void subscribeMessage(String topic) throws MqttException{
         this.subscribeMessage(topic, this.getQos());
     }
 
     @Override
-    public void subscribeMessage(String topic, IMqttMessageListener messageListener) {
+    public void subscribeMessage(String topic, int qos) throws MqttException{
+        this.mqttClient.subscribe(topic,qos);
+        this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos));
+    }
+
+
+    @Override
+    public void subscribeMessage(String topic, IMqttMessageListener messageListener) throws MqttException{
         this.subscribeMessage(topic, this.getQos(), messageListener);
     }
 
     @Override
-    public void subscribeMessage(String topic, int qos, IMqttMessageListener messageListener) {
-        try {
-            this.mqttClient.subscribe(topic, qos, messageListener);
-            this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos, messageListener));
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public void subscribeMessage(String topic, int qos, IMqttMessageListener messageListener) throws MqttException{
+        this.mqttClient.subscribe(topic, qos, messageListener);
+        this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos, messageListener));
     }
 
     @Override
-    public void subscribeMessages(String[] topics) {
+    public void subscribeMessages(String[] topics) throws MqttException{
         int[] qos = new int[topics.length];
         Arrays.fill(qos, this.getQos());
         this.subscribeMessages(topics, qos);
     }
 
     @Override
-    public void subscribeMessages(String[] topics, int[] qos) {
-        try {
-            this.mqttClient.subscribe(topics, qos);
-            for(int i=0; i< topics.length; i++){
-                this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i]));
-            }
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+    public void subscribeMessages(String[] topics, int[] qos) throws MqttException{
+        this.mqttClient.subscribe(topics, qos);
+        for(int i=0; i< topics.length; i++){
+            this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i]));
         }
     }
 
     @Override
-    public void subscribeMessages(String[] topics, IMqttMessageListener[] messageListeners) {
+    public void subscribeMessages(String[] topics, IMqttMessageListener[] messageListeners) throws MqttException{
         int[] qos = new int[topics.length];
         Arrays.fill(qos, this.getQos());
         this.subscribeMessages(topics, qos, messageListeners);
     }
 
     @Override
-    public void subscribeMessages(String[] topics, int[] qos, IMqttMessageListener[] messageListeners) {
-        try {
-            this.mqttClient.subscribe(topics, qos, messageListeners);
+    public void subscribeMessages(String[] topics, int[] qos, IMqttMessageListener[] messageListeners) throws MqttException{
+        this.mqttClient.subscribe(topics, qos, messageListeners);
 
-            for(int i=0; i<topics.length; i++){
-                try{
-                    this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
-                }catch (Exception e){
-                    logger.error(e.getMessage(), e);
-                }
-
-            }
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+        for(int i=0; i<topics.length; i++){
+            this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
         }
     }
 
     @Override
-    public void unsubscribeMessage(String topic) {
-        try {
-            this.mqttClient.unsubscribe(topic);
-            this.subscribedTuples.remove(topic);
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public void unsubscribeMessage(String topic) throws MqttException{
+        this.mqttClient.unsubscribe(topic);
+        this.subscribedTuples.remove(topic);
     }
 
     @Override
-    public void unsubscribeMessages(String[] topics) {
+    public void unsubscribeMessages(String[] topics) throws MqttException{
+        this.mqttClient.unsubscribe(topics);
         for(String topic : topics){
-            unsubscribeMessage(topic);
+            this.subscribedTuples.remove(topic);
         }
     }
 
     @Override
-    public void disconnect() {
-        try {
-            mqttClient.disconnect();
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public boolean isConnected() {
+        return this.mqttClient.isConnected();
+    }
+
+    @Override
+    public void disconnect() throws MqttException{
+        mqttClient.disconnect();
     }
 
     /**
@@ -204,8 +182,8 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      */
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception{
-            logger.info("Topic: " + topic + ", " +
-                    "Message: " + message.toString());
+        logger.info("Topic: " + topic + ", " +
+                "Message: " + message.toString());
 
     }
 

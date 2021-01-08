@@ -5,6 +5,7 @@ package com.mohey.mqtt.core;
  * @since 2020/12/29
  */
 
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 
 @Component
+@Slf4j
 public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, IMQTTPublisher {
 
     private MqttAsyncClient mqttClient;
@@ -61,12 +63,13 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
     }
 
     @Override
-    public void disconnect() {
-        try {
-            this.mqttClient.disconnect();
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public boolean isConnected() {
+        return this.mqttClient.isConnected();
+    }
+
+    @Override
+    public void disconnect() throws MqttException{
+        this.mqttClient.disconnect();
     }
 
     @Override
