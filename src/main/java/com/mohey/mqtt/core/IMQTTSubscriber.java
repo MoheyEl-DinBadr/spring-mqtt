@@ -1,7 +1,7 @@
 package com.mohey.mqtt.core;
 
-import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
-import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
+import org.eclipse.paho.mqttv5.common.MqttException;
 
 /**
  * @author Mohey El-Din Badr

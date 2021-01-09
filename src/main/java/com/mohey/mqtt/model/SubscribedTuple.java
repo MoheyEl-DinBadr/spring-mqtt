@@ -2,7 +2,7 @@ package com.mohey.mqtt.model;
 
 import lombok.Getter;
 import lombok.NonNull;
-import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
+import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
 
 /**
  * @author Mohey El-Din Badr

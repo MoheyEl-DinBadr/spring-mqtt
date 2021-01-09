@@ -6,24 +6,23 @@ package com.mohey.mqtt.core;
  */
 
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.paho.client.mqttv3.*;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.paho.mqttv5.client.*;
+import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
+import org.eclipse.paho.mqttv5.common.MqttException;
+import org.eclipse.paho.mqttv5.common.MqttMessage;
+import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.springframework.stereotype.Component;
 
 
 @Component
 @Slf4j
-public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, IMQTTPublisher {
+public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPublisher {
 
     private MqttAsyncClient mqttClient;
 
     private static MQTTPublisher instance;
 
     private String clientId;
-
-    private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
 
     private MQTTPublisher() {
         instance = this;
@@ -34,12 +33,8 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
     }
 
     @Override
-    public void publishMessage(String topic, String message, int qos, boolean retain) {
-        try {
-            this.mqttClient.publish(topic, message.getBytes(), qos, retain);
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public void publishMessage(String topic, String message, int qos, boolean retain) throws MqttException {
+        this.mqttClient.publish(topic, message.getBytes(), qos, retain);
     }
 
     @Override
@@ -49,17 +44,14 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
             mqttMessage.setQos(this.getQos());
             this.mqttClient.publish(topic, mqttMessage);
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
     }
 
     @Override
-    public void publishMessage(String topic, MqttMessage message) {
-        try {
-            this.mqttClient.publish(topic, message);
-        } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
-        }
+    public void publishMessage(String topic, MqttMessage message) throws MqttException {
+
+        this.mqttClient.publish(topic, message);
     }
 
     @Override
@@ -82,15 +74,23 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
 
         MemoryPersistence memoryPersistence = new MemoryPersistence();
 
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        MqttConnectionOptions mqttConnectOptions = new MqttConnectionOptions();
         mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(true);
-        mqttConnectOptions.setWill("status/"+ clientId, "disconnected".getBytes(), this.getQos(), true);
+        mqttConnectOptions.setCleanStart(true);
+        mqttConnectOptions.setAuthMethod(this.getAuthMethod());
+        mqttConnectOptions.setAuthData(this.getAuthData().getBytes());
+
+        MqttMessage willMessage = new MqttMessage();
+        willMessage.setPayload("disconnected".getBytes());
+        willMessage.setQos(this.getQos());
+        willMessage.setRetained(true);
+        mqttConnectOptions.setWill("status/"+this.clientId,willMessage);
+
         if(!this.getUsername().trim().isEmpty()){
             mqttConnectOptions.setUserName(this.getUsername());
         }
         if(!this.getPassword().trim().isEmpty()){
-            mqttConnectOptions.setPassword(this.getPassword().toCharArray());
+            mqttConnectOptions.setPassword(this.getPassword().getBytes());
         }
 
         try {
@@ -107,18 +107,39 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
             Runtime.getRuntime().addShutdownHook(mqttClose);
 
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
     }
 
     /**
-     * This method is called when the connection to the server is lost.
+     * This method is called when the server gracefully disconnects from the client
+     * by sending a disconnect packet, or when the TCP connection is lost due to a
+     * network issue or if the client encounters an error.
      *
-     * @param cause the reason behind the loss of connection.
+     * @param disconnectResponse a {@link MqttDisconnectResponse} containing relevant properties
+     *                           related to the cause of the disconnection.
      */
     @Override
-    public void connectionLost(Throwable cause) {
-        logger.info(cause.getMessage());
+    public void disconnected(MqttDisconnectResponse disconnectResponse) {
+        log.info(disconnectResponse.getReasonString());
+    }
+
+    /**
+     * This method is called when an exception is thrown within the MQTT client. The
+     * reasons for this may vary, from malformed packets, to protocol errors or even
+     * bugs within the MQTT client itself. This callback surfaces those errors to
+     * the application so that it may decide how best to deal with them.
+     * <p>
+     * For example, The MQTT server may have sent a publish message with an invalid
+     * topic alias, the MQTTv5 specification suggests that the client should
+     * disconnect from the broker with the appropriate return code, however this is
+     * completely up to the application itself.
+     *
+     * @param exception - The exception thrown causing the error.
+     */
+    @Override
+    public void mqttErrorOccurred(MqttException exception) {
+        log.error(exception.getMessage(), exception);
     }
 
     /**
@@ -159,18 +180,18 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
 
     /**
      * Called when delivery for a message has been completed, and all
-     * acknowledgments have been received. For QoS 0 messages it is
-     * called once the message has been handed to the network for
-     * delivery. For QoS 1 it is called when PUBACK is received and
-     * for QoS 2 when PUBCOMP is received. The token will be the same
-     * token as that returned when the message was published.
+     * acknowledgments have been received. For QoS 0 messages it is called once the
+     * message has been handed to the network for delivery. For QoS 1 it is called
+     * when PUBACK is received and for QoS 2 when PUBCOMP is received. The token
+     * will be the same token as that returned when the message was published.
      *
      * @param token the delivery token associated with the message.
      */
     @Override
-    public void deliveryComplete(IMqttDeliveryToken token) {
-        logger.info("Delivery Completed");
+    public void deliveryComplete(IMqttToken token) {
+        log.info("Delivery Completed");
     }
+
 
     /**
      * Called when the connection to the server is completed successfully.
@@ -183,7 +204,20 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
         try {
             this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), this.getQos(), true );
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
+    }
+
+    /**
+     * Called when an AUTH packet is received by the client.
+     *
+     * @param reasonCode The Reason code, can be Success (0), Continue authentication (24)
+     *                   or Re-authenticate (25).
+     * @param properties The {@link MqttProperties} to be sent, containing the
+     *                   Authentication Method, Authentication Data and any required User
+     */
+    @Override
+    public void authPacketArrived(int reasonCode, MqttProperties properties) {
+        log.info("reasonCode: " + reasonCode +", " + "properties: " + properties);
     }
 }

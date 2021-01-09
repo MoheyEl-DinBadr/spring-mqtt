@@ -4,6 +4,7 @@ package com.mohey.mqtt.core;
  * @since 2020/12/28
  */
 import lombok.Getter;
+import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PostConstruct;
@@ -32,10 +33,17 @@ public abstract class MQTTConfig {
     @Value("${mqtt.clientId:}")
     private String clientId;
 
+    @Value("${mqtt.authMethod:}")
+    private String authMethod;
+
+    @Value("${mqtt.authData}")
+    private String authData;
+
     private String TCP = "tcp://";
 
     private  String SSL = "ssl://";
 
+    private MqttMessage willMessage;
     @PostConstruct
     protected abstract void config();
 
