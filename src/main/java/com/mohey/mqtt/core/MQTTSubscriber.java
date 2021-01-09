@@ -6,18 +6,17 @@ package com.mohey.mqtt.core;
 
 import com.mohey.mqtt.model.SubscribedTuple;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 @Component
+@Slf4j
 public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, IMQTTSubscriber{
-
-    private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
+    
     private static MQTTSubscriber instance;
     @Getter
     private MqttClient mqttClient;
@@ -126,14 +125,14 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
         try {
             this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), 2, true );
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
         if(this.subscribedTuples.size() != 0){
             for(SubscribedTuple tuple : this.subscribedTuples.values()){
                 try {
                     this.mqttClient.subscribe(tuple.getTopic(), tuple.getQos(), tuple.getMessageListener());
                 } catch (MqttException e) {
-                    logger.error(e.getMessage() + ", topic: " + tuple.getTopic(), e);
+                    log.error(e.getMessage() + ", topic: " + tuple.getTopic(), e);
                 }
             }
         }
@@ -146,7 +145,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      */
     @Override
     public void connectionLost(Throwable cause) {
-        logger.info("Connection Lost");
+        log.info("Connection Lost");
     }
 
     /**
@@ -182,7 +181,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
      */
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception{
-        logger.info("Topic: " + topic + ", " +
+        log.info("Topic: " + topic + ", " +
                 "Message: " + message.toString());
 
     }
@@ -231,13 +230,13 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
                 try {
                     this.mqttClient.close();
                 } catch (MqttException e) {
-                    logger.error(e.getMessage(), e);
+                    log.error(e.getMessage(), e);
                 }
             });
             Runtime.getRuntime().addShutdownHook(mqttClose);
 
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
 
     }

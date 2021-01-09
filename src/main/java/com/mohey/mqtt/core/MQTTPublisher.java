@@ -8,8 +8,6 @@ package com.mohey.mqtt.core;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 
@@ -22,8 +20,6 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
     private static MQTTPublisher instance;
 
     private String clientId;
-
-    private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
 
     private MQTTPublisher() {
         instance = this;
@@ -38,7 +34,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
         try {
             this.mqttClient.publish(topic, message.getBytes(), qos, retain);
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -49,7 +45,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
             mqttMessage.setQos(this.getQos());
             this.mqttClient.publish(topic, mqttMessage);
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -58,7 +54,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
         try {
             this.mqttClient.publish(topic, message);
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -107,7 +103,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
             Runtime.getRuntime().addShutdownHook(mqttClose);
 
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -118,7 +114,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
      */
     @Override
     public void connectionLost(Throwable cause) {
-        logger.info(cause.getMessage());
+        log.info(cause.getMessage());
     }
 
     /**
@@ -169,7 +165,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
      */
     @Override
     public void deliveryComplete(IMqttDeliveryToken token) {
-        logger.info("Delivery Completed");
+        log.info("Delivery Completed");
     }
 
     /**
@@ -183,7 +179,7 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
         try {
             this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), this.getQos(), true );
         } catch (MqttException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
         }
     }
 }
