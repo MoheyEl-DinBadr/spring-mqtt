@@ -77,19 +77,22 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         MqttConnectionOptions mqttConnectOptions = new MqttConnectionOptions();
         mqttConnectOptions.setAutomaticReconnect(true);
         mqttConnectOptions.setCleanStart(true);
-        mqttConnectOptions.setAuthMethod(this.getAuthMethod());
-        mqttConnectOptions.setAuthData(this.getAuthData().getBytes());
-
+        if(!this.getAuthMethod().isBlank()){
+            mqttConnectOptions.setAuthMethod(this.getAuthMethod());
+        }
+        if(!this.getAuthData().isBlank()){
+            mqttConnectOptions.setAuthData(this.getAuthData().getBytes());
+        }
         MqttMessage willMessage = new MqttMessage();
         willMessage.setPayload("disconnected".getBytes());
         willMessage.setQos(this.getQos());
         willMessage.setRetained(true);
         mqttConnectOptions.setWill("status/"+this.clientId,willMessage);
 
-        if(!this.getUsername().trim().isEmpty()){
+        if(!this.getUsername().isBlank()){
             mqttConnectOptions.setUserName(this.getUsername());
         }
-        if(!this.getPassword().trim().isEmpty()){
+        if(!this.getPassword().isBlank()){
             mqttConnectOptions.setPassword(this.getPassword().getBytes());
         }
 

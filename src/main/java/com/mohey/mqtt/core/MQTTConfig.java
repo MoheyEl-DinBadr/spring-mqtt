@@ -36,14 +36,13 @@ public abstract class MQTTConfig {
     @Value("${mqtt.authMethod:}")
     private String authMethod;
 
-    @Value("${mqtt.authData}")
+    @Value("${mqtt.authData:}")
     private String authData;
 
     private String TCP = "tcp://";
 
     private  String SSL = "ssl://";
 
-    private MqttMessage willMessage;
     @PostConstruct
     protected abstract void config();
 

@@ -151,7 +151,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
      */
     @Override
     public void authPacketArrived(int reasonCode, MqttProperties properties) {
-
+        log.info("reasonCode: " + reasonCode +", " + "properties: " + properties);
     }
     
 
@@ -165,7 +165,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
      */
     @Override
     public void disconnected(MqttDisconnectResponse disconnectResponse) {
-        log.info("Connection Lost: " + disconnectResponse.getReasonString());
+        log.info("Connection lost: " + disconnectResponse.getReasonString());
     }
 
     /**
@@ -252,19 +252,22 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
         MqttConnectionOptions mqttConnectOptions = new MqttConnectionOptions();
         mqttConnectOptions.setAutomaticReconnect(true);
         mqttConnectOptions.setCleanStart(true);
-        mqttConnectOptions.setAuthMethod(this.getAuthMethod());
-        mqttConnectOptions.setAuthData(this.getAuthData().getBytes());
-
+        if(!this.getAuthMethod().isBlank()){
+            mqttConnectOptions.setAuthMethod(this.getAuthMethod());
+        }
+        if(!this.getAuthData().isBlank()){
+            mqttConnectOptions.setAuthData(this.getAuthData().getBytes());
+        }
         MqttMessage willMessage = new MqttMessage();
         willMessage.setPayload("disconnected".getBytes());
         willMessage.setQos(this.getQos());
         willMessage.setRetained(true);
         mqttConnectOptions.setWill("status/"+this.clientId,willMessage);
 
-        if(!this.getUsername().trim().isEmpty()){
+        if(!this.getUsername().isBlank()){
             mqttConnectOptions.setUserName(this.getUsername());
         }
-        if(!this.getPassword().trim().isEmpty()){
+        if(!this.getPassword().isBlank()){
             mqttConnectOptions.setPassword(this.getPassword().getBytes());
         }
 
