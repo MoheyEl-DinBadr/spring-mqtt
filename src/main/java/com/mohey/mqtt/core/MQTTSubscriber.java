@@ -45,6 +45,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
     @Override
     public void subscribeMessage(String topic, int qos) throws MqttException{
         this.mqttClient.subscribe(topic,qos);
+        log.info("Subscribed to Topic: " + topic + ", Qos: " + this.getQos());
         this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos));
     }
 
@@ -57,6 +58,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
     @Override
     public void subscribeMessage(String topic, int qos, IMqttMessageListener messageListener) throws MqttException{
         this.mqttClient.subscribe(topic, qos, messageListener);
+        log.info("Subscribed to Topic: " + topic + ", Qos: " + this.getQos() + ", MessageListener: " + messageListener.getClass().getName());
         this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos, messageListener));
     }
 
@@ -70,6 +72,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
     @Override
     public void subscribeMessages(String[] topics, int[] qos) throws MqttException{
         this.mqttClient.subscribe(topics, qos);
+        log.info("");
         for(int i=0; i< topics.length; i++){
             this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i]));
         }
@@ -85,7 +88,7 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
     @Override
     public void subscribeMessages(String[] topics, int[] qos, IMqttMessageListener[] messageListeners) throws MqttException{
         this.mqttClient.subscribe(topics, qos, messageListeners);
-
+        log.info("Subscribed to Topics: " + topics + ", Qos: " + qos + ", MessageListeners: " + messageListeners.length);
         for(int i=0; i<topics.length; i++){
             this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
         }

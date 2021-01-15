@@ -1,7 +1,9 @@
 package com.mohey.mqtt.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
 
 /**
@@ -9,6 +11,8 @@ import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
  * @date 2021/1/1
  */
 @Getter
+@AllArgsConstructor
+@RequiredArgsConstructor
 public class SubscribedTuple {
 
     @NonNull
@@ -18,17 +22,6 @@ public class SubscribedTuple {
     private int qos;
 
     private IMqttMessageListener messageListener;
-
-    public SubscribedTuple(@NonNull String topic, @NonNull int qos, IMqttMessageListener messageListener) {
-        this.topic = topic;
-        this.qos = qos;
-        this.messageListener = messageListener;
-    }
-
-    public SubscribedTuple(@NonNull String topic, @NonNull int qos) {
-        this.topic = topic;
-        this.qos = qos;
-    }
 
     @Override
     public boolean equals(Object o) {

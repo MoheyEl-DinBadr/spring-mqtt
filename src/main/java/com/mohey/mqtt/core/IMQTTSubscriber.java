@@ -9,9 +9,9 @@ import org.eclipse.paho.mqttv5.common.MqttException;
  */
 public interface IMQTTSubscriber extends IMQTTClient{
 
-    void subscribeMessage(String topic, int qos) throws MqttException;
-
     void subscribeMessage(String topic) throws MqttException;
+
+    void subscribeMessage(String topic, int qos) throws MqttException;
 
     void subscribeMessage(String topic, IMqttMessageListener messageListener) throws MqttException;
 
