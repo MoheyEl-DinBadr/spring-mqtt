@@ -33,15 +33,30 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
         instance = this;
     }
 
+    /**
+     * If used must be sure that the bean has been created
+     * @return returns instance of the MQTTSubscriber
+     */
     public static MQTTSubscriber getInstance(){
         return instance;
     }
 
+    /**
+     * Subscribe to desired topic with default qos
+     * @param topic String topic to subscribe to
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessage(String topic) throws MqttException {
         this.subscribeMessage(topic, this.getQos());
     }
 
+    /**
+     * Subscribe to a topic provided qos
+     * @param topic String topic to subscribe to
+     * @param qos int qos to subscribe ex.(qos=0,1,2)
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessage(String topic, int qos) throws MqttException{
         this.mqttClient.subscribe(topic,qos);
@@ -49,12 +64,24 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
         this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos));
     }
 
-
+    /**
+     * Subscribe to desired topic with default qos while providing messageListener to handle received message
+     * @param topic String topic to subscribe to
+     * @param messageListener a callback to handle incoming messages
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessage(String topic, IMqttMessageListener messageListener) throws MqttException{
         this.subscribeMessage(topic, this.getQos(), messageListener);
     }
 
+    /**
+     *
+     * @param topic String topic to subscribe to
+     * @param qos int qos to subscribe ex.(qos=0,1,2)
+     * @param messageListener a callback to handle incoming messages
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessage(String topic, int qos, IMqttMessageListener messageListener) throws MqttException{
         this.mqttClient.subscribe(topic, qos, messageListener);
@@ -62,6 +89,11 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
         this.subscribedTuples.put(topic, new SubscribedTuple(topic, qos, messageListener));
     }
 
+    /**
+     * Subscribe to an array of topics with the default qos
+     * @param topics String array of topics to subscribe to
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessages(String[] topics) throws MqttException{
         int[] qos = new int[topics.length];
@@ -69,15 +101,27 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
         this.subscribeMessages(topics, qos);
     }
 
+    /**
+     * Subscribe to a group of topics providing a qos for each topic
+     * @param topics String array of topics to subscribe to
+     * @param qos int array of qos values (0,1,2)
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessages(String[] topics, int[] qos) throws MqttException{
         this.mqttClient.subscribe(topics, qos);
-        log.info("");
+        log.info("Subscribed to mqtt topics");
         for(int i=0; i< topics.length; i++){
             this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i]));
         }
     }
 
+    /**
+     * Subscribe to a group of topics providing message handler for each topic with default qos
+     * @param topics String array of topics
+     * @param messageListeners array of callbacks to handle incoming messages
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessages(String[] topics, IMqttMessageListener[] messageListeners) throws MqttException{
         int[] qos = new int[topics.length];
@@ -85,21 +129,38 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
         this.subscribeMessages(topics, qos, messageListeners);
     }
 
+    /**
+     * Subscribe to a group of topics providing qos and messageListeners for each topic
+     * @param topics String array of topics
+     * @param qos int array of qos
+     * @param messageListeners array of callbacks to handle incoming messages
+     * @throws MqttException if there was an error registering the subscription.
+     */
     @Override
     public void subscribeMessages(String[] topics, int[] qos, IMqttMessageListener[] messageListeners) throws MqttException{
         this.mqttClient.subscribe(topics, qos, messageListeners);
-        log.info("Subscribed to Topics: " + topics + ", Qos: " + qos + ", MessageListeners: " + messageListeners.length);
+        log.info("Subscribed to provided Topics");
         for(int i=0; i<topics.length; i++){
             this.subscribedTuples.put(topics[i], new SubscribedTuple(topics[i], qos[i], messageListeners[i]));
         }
     }
 
+    /**
+     * Unsubscribe to a given topic
+     * @param topic String mqtt topic
+     * @throws MqttException if there was an error unregistering the subscription.
+     */
     @Override
     public void unsubscribeMessage(String topic) throws MqttException{
         this.mqttClient.unsubscribe(topic);
         this.subscribedTuples.remove(topic);
     }
 
+    /**
+     * Unsubscribe to a group of topics
+     * @param topics String array of topics to unsubscribe
+     * @throws MqttException if there was an error unregistering the subscription.
+     */
     @Override
     public void unsubscribeMessages(String[] topics) throws MqttException{
         this.mqttClient.unsubscribe(topics);
@@ -108,11 +169,19 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallback, IMQTTSub
         }
     }
 
+    /**
+     * Check if the MQTT Client is connected
+     * @return boolean connected or not
+     */
     @Override
     public boolean isConnected() {
         return this.mqttClient.isConnected();
     }
 
+    /**
+     * Disconnect MQTT Subscriber
+     * @throws MqttException for problems encountered while disconnecting
+     */
     @Override
     public void disconnect() throws MqttException{
         mqttClient.disconnect();

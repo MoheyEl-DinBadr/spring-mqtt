@@ -13,7 +13,6 @@ import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.springframework.stereotype.Component;
 
-
 @Component
 @Slf4j
 public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPublisher {
@@ -28,37 +27,63 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallback, IMQTTPubl
         instance = this;
     }
 
+    /**
+     * If used must be sure that the bean has been created
+     * @return returns instance of the MQTTPublisher
+     */
     public static MQTTPublisher getInstance(){
         return instance;
     }
 
+    /**
+     * The method is used to publish a message using topic, and parameters with the default qos set at the enviroment
+     * @param topic The MQTT topic to publish the message on
+     * @param message String of the message to be delivered
+     * @throws MqttException for other errors encountered while publishing the message.
+     */
+    @Override
+    public void publishMessage(String topic, String message) throws MqttException {
+        MqttMessage mqttMessage = new MqttMessage(message.getBytes());
+        mqttMessage.setQos(this.getQos());
+        this.mqttClient.publish(topic, mqttMessage);
+    }
+
+    /**
+     *
+     * @param topic String MQTT topic to publish the message on
+     * @param message MqttMessage to be published
+     * @throws MqttException for other errors encountered while publishing the message.
+     */
+    @Override
+    public void publishMessage(String topic, MqttMessage message) throws MqttException {
+        this.mqttClient.publish(topic, message);
+    }
+
+    /**
+     *
+     * @param topic to deliver the message to, for example "finance/stock/ibm".
+     * @param message string message to be used as payload
+     * @param qos the Quality of Service to deliver the message at. Valid values are 0, 1 or 2.
+     * @param retain whether or not this message should be retained by the server.
+     * @throws MqttException for other errors encountered while publishing the message.
+     */
     @Override
     public void publishMessage(String topic, String message, int qos, boolean retain) throws MqttException {
         this.mqttClient.publish(topic, message.getBytes(), qos, retain);
     }
 
-    @Override
-    public void publishMessage(String topic, String message) {
-        try {
-            MqttMessage mqttMessage = new MqttMessage(message.getBytes());
-            mqttMessage.setQos(this.getQos());
-            this.mqttClient.publish(topic, mqttMessage);
-        } catch (MqttException e) {
-            log.error(e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public void publishMessage(String topic, MqttMessage message) throws MqttException {
-
-        this.mqttClient.publish(topic, message);
-    }
-
+    /**
+     * @return boolean if the client is connected or not
+     */
     @Override
     public boolean isConnected() {
         return this.mqttClient.isConnected();
     }
 
+    /**
+     * disconnects the mqtt client
+     * @throws MqttException for problems encountered while disconnecting
+     */
     @Override
     public void disconnect() throws MqttException{
         this.mqttClient.disconnect();
