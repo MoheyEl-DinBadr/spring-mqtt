@@ -12,6 +12,8 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 @Slf4j
@@ -22,6 +24,14 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     private MqttClient mqttClient;
 
     private String clientId;
+
+    private final List<Runnable> onConnectRunnables = new ArrayList<>();
+
+    private final List<Runnable> onDisconnectRunnables = new ArrayList<>();
+
+    private final ExecutorService onConnectExecutors = Executors.newFixedThreadPool(10);
+
+    private final ExecutorService onDisconnectExecutors = Executors.newFixedThreadPool(10);
 
     @Getter
     private final Map<String, SubscribedTuple> subscribedTuples = new HashMap<>();
@@ -193,21 +203,30 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
 
     @Override
     public void connectComplete(boolean reconnect, String serverURI) {
+        log.info("Connection Established: " + serverURI);
 
-        try {
-            this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), 2, true );
-        } catch (MqttException e) {
-            log.error(e.getMessage(), e);
-        }
-        if(this.subscribedTuples.size() != 0){
-            for(SubscribedTuple tuple : this.subscribedTuples.values()){
-                try {
-                    this.mqttClient.subscribe(tuple.getTopic(), tuple.getQos(), tuple.getMessageListener());
-                } catch (MqttException e) {
-                    log.error(e.getMessage() + ", topic: " + tuple.getTopic(), e);
+        onConnectExecutors.execute(()->{
+            try {
+                this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), 2, true );
+            } catch (MqttException e) {
+                log.error(e.getMessage(), e);
+            }
+            if(this.subscribedTuples.size() != 0){
+                for(SubscribedTuple tuple : this.subscribedTuples.values()){
+                    try {
+                        this.subscribeMessage(tuple.getTopic(), tuple.getQos(), tuple.getMessageListener());
+                    } catch (MqttException e) {
+                        log.error(e.getMessage() + ", topic: " + tuple.getTopic(), e);
+                    }
                 }
             }
+        });
+
+        for(Runnable runnable : this.onConnectRunnables){
+            this.onConnectExecutors.execute(runnable);
         }
+
+
     }
 
     /**
@@ -218,6 +237,10 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
     @Override
     public void connectionLost(Throwable cause) {
         log.info("Connection Lost");
+
+        for(Runnable runnable: this.onDisconnectRunnables){
+            this.onDisconnectExecutors.execute(runnable);
+        }
     }
 
     /**
@@ -311,5 +334,21 @@ public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, 
             log.error(e.getMessage(), e);
         }
 
+    }
+
+    public void addOnConnectTask(Runnable runnable){
+        this.onConnectRunnables.add(runnable);
+    }
+
+    public void removeOnConnectTask(Runnable runnable){
+        this.onConnectRunnables.remove(runnable);
+    }
+
+    public void addOnDisConnectTask(Runnable runnable){
+        this.onDisconnectRunnables.add(runnable);
+    }
+
+    public void removeOnDisConnectTask(Runnable runnable){
+        this.onDisconnectRunnables.remove(runnable);
     }
 }

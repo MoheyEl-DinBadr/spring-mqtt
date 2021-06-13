@@ -10,6 +10,11 @@ import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 @Component
 @Slf4j
@@ -20,6 +25,14 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
     private static MQTTPublisher instance;
 
     private String clientId;
+
+    private final List<Runnable> onConnectRunnables = new ArrayList<>();
+
+    private final List<Runnable> onDisconnectRunnables = new ArrayList<>();
+
+    private final ExecutorService onConnectExecutors = Executors.newFixedThreadPool(10);
+
+    private final ExecutorService onDisconnectExecutors = Executors.newFixedThreadPool(10);
 
     private MQTTPublisher() {
         instance = this;
@@ -134,6 +147,9 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
     @Override
     public void connectionLost(Throwable cause) {
         log.info(cause.getMessage());
+        for(Runnable runnable: onDisconnectRunnables){
+            this.onDisconnectExecutors.execute(runnable);
+        }
     }
 
     /**
@@ -195,10 +211,35 @@ public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, I
      */
     @Override
     public void connectComplete(boolean reconnect, String serverURI) {
-        try {
-            this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), this.getQos(), true );
-        } catch (MqttException e) {
-            log.error(e.getMessage(), e);
+        log.info("Connection Established: " + serverURI);
+
+        this.onConnectExecutors.execute(()->{
+            try {
+                this.mqttClient.publish("status/" + this.clientId, "connected".getBytes(), this.getQos(), true );
+            } catch (MqttException e) {
+                log.error(e.getMessage(), e);
+            }
+        });
+
+        for(Runnable runnable: onConnectRunnables){
+            this.onConnectExecutors.execute(runnable);
         }
+
+    }
+
+    public void addOnConnectTask(Runnable runnable){
+        this.onConnectRunnables.add(runnable);
+    }
+
+    public void removeOnConnectTask(Runnable runnable){
+        this.onConnectRunnables.remove(runnable);
+    }
+
+    public void addOnDisConnectTask(Runnable runnable){
+        this.onDisconnectRunnables.add(runnable);
+    }
+
+    public void removeOnDisConnectTask(Runnable runnable){
+        this.onDisconnectRunnables.remove(runnable);
     }
 }
