@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 
 @Component
 @Slf4j
-public class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, IMQTTSubscriber{
+public final class MQTTSubscriber extends MQTTConfig implements MqttCallbackExtended, IMQTTSubscriber{
     
     private static MQTTSubscriber instance;
     @Getter

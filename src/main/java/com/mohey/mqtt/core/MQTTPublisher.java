@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 
 @Component
 @Slf4j
-public class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, IMQTTPublisher {
+public final class MQTTPublisher extends MQTTConfig implements MqttCallbackExtended, IMQTTPublisher {
 
     private MqttAsyncClient mqttClient;
 
